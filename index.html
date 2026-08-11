@@ -1,15 +1,746 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ordem do Dia — LWSA</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-<script type="module" src="/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ordem do Dia — LWSA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+body{background:#F0F2F5;min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace}
+input,textarea,button{font-family:'Inter',sans-serif}
+textarea{resize:none}
+input:focus,textarea:focus{outline:none}
+@media print{.no-print{display:none!important}body{background:white}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:99px}
+
+/* Layout */
+.container{max-width:900px;margin:0 auto;padding:80px 16px 120px}
+.doc{background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+
+/* Header */
+.logo-banner{width:100%;height:110px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer}
+.logo-banner:hover .logo-overlay{opacity:1}
+.logo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:.2s;color:white;font-size:12px;gap:6px}
+.header-meta{padding:28px 32px 20px}
+.client-label{font-size:10px;font-weight:900;letter-spacing:.3em;text-transform:uppercase;display:block;margin-bottom:4px}
+.project-title{font-size:28px;font-weight:900;color:#111;width:100%;border:none;background:transparent;line-height:1.2}
+.project-title:focus{background:#f9fafb;border-radius:6px;padding:2px 6px}
+.date-row{display:flex;align-items:center;gap:6px;margin-top:10px;color:#6b7280;font-size:13px}
+.date-input{background:transparent;border:none;color:#374151;font-weight:500;font-size:13px}
+.location-box{background:#f9fafb;border-radius:12px;padding:14px 16px;margin-top:16px}
+.location-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.location-text{background:transparent;border:none;font-size:13px;font-weight:500;color:#374151;width:100%;line-height:1.5;min-height:32px}
+
+/* Sections */
+.section{padding:20px 32px}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:16px}
+.section-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#111}
+.add-btn{font-size:11px;font-weight:700;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;transition:.15s}
+.add-btn:hover{background:#f3f4f6}
+
+/* Person cards */
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.person-card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:10px;display:flex;gap:10px;position:relative;transition:.2s}
+.person-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08);border-color:#d1d5db}
+.person-card:hover .del-btn{opacity:1}
+.avatar{width:52px;height:52px;border-radius:10px;background:#f3f4f6;flex-shrink:0;overflow:hidden;position:relative;cursor:pointer}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar-icon{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#d1d5db}
+.avatar:hover .av-overlay{opacity:1}
+.av-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;border-radius:10px}
+.person-info{flex:1;min-width:0}
+.name-input{font-weight:700;font-size:13px;color:#111;width:100%;border:none;background:transparent}
+.name-input:focus{background:#f9fafb;border-radius:4px;padding:1px 4px}
+.role-input{font-size:11px;font-weight:500;color:#6b7280;width:100%;border:none;background:transparent;margin-top:1px}
+.time-row{display:flex;gap:8px;margin-top:6px;font-size:10px;font-family:'JetBrains Mono',monospace}
+.time-lbl{color:#9ca3af;font-weight:600}
+.time-input{background:transparent;border-bottom:1px solid transparent;font-family:'JetBrains Mono',monospace;font-size:10px;width:58px;cursor:pointer}
+.time-input:hover{border-bottom-color:#d1d5db}
+.del-btn{position:absolute;top:-7px;right:-7px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:.15s;font-size:10px;line-height:1}
+
+/* Empty state */
+.empty-state{border:2px dashed #e5e7eb;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:8px;padding:18px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;transition:.2s}
+.empty-state:hover{border-color:#d1d5db;color:#6b7280}
+
+/* Schedule */
+.schedule-list{display:flex;flex-direction:column;gap:8px;padding-left:28px}
+.block-row{display:flex;position:relative;min-height:48px}
+.block-row:hover .del-block{opacity:1}
+.del-block{position:absolute;left:-24px;top:10px;background:#fef2f2;border:none;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:.15s;color:#f87171}
+.del-block:hover{background:#fee2e2;color:#ef4444}
+.time-col{width:76px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#6b7280;text-align:center;display:flex;flex-direction:column;justify-content:center;border-right:1px solid #f3f4f6;background:white;z-index:1;padding:4px;gap:2px}
+.time-col input{width:100%;text-align:center;background:transparent;border:none;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer}
+.time-sep{color:#e5e7eb;font-size:8px;text-align:center}
+
+/* Action block */
+.action-block{flex:1;display:flex;border:1px solid #e5e7eb;margin-left:-1px;border-radius:0 14px 14px 0;overflow:hidden;background:white;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.action-block:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.accent-bar{width:4px;flex-shrink:0}
+.action-main{flex:1;padding:10px 12px;border-right:1px solid #f3f4f6;display:flex;flex-direction:column;gap:6px;min-width:0}
+.scene-title{font-weight:700;font-size:13px;color:#111;width:100%;border:none;background:transparent;border-bottom:1px solid transparent}
+.scene-title:focus{border-bottom-color:#e5e7eb}
+.scene-desc{font-size:11px;color:#9ca3af;width:100%;border:none;background:transparent;min-height:32px;line-height:1.5}
+.cast-row{display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px solid #f3f4f6;font-size:11px}
+.cast-lbl{color:#d1d5db;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.cast-input{flex:1;border:none;background:transparent;font-size:11px;font-weight:600;border-bottom:1px solid transparent}
+.cast-input:focus{border-bottom-color:#e5e7eb}
+
+/* Scene meta */
+.scene-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;padding-top:8px;border-top:1px solid #f3f4f6;margin-top:4px}
+.meta-row{display:flex;align-items:center;gap:6px}
+.meta-icon{color:#d1d5db;flex-shrink:0;font-size:12px}
+.meta-input{font-size:11px;color:#6b7280;background:transparent;border:none;width:100%}
+.meta-input::placeholder{color:#d1d5db}
+.meta-full{grid-column:1/-1}
+.teleprompter-btn{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid #e5e7eb;cursor:pointer;transition:.15s;background:white;color:#9ca3af}
+
+/* Location+image panel */
+.action-side{width:160px;flex-shrink:0;background:#fafafa;display:flex;flex-direction:column}
+.loc-area{padding:8px;flex:1;display:flex;align-items:flex-start;justify-content:center;padding-top:12px}
+.loc-input{font-size:11px;color:#9ca3af;text-align:center;width:100%;border:none;background:transparent;min-height:28px;line-height:1.4}
+.loc-input::placeholder{color:#d1d5db}
+.img-area{height:80px;border-top:1px solid #e5e7eb;position:relative;cursor:pointer;background:#f9fafb;flex-shrink:0;overflow:hidden}
+.img-area:hover .img-overlay{opacity:1}
+.img-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s}
+.img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#d1d5db;font-size:10px}
+.img-bg{width:100%;height:100%;background-size:cover;background-position:center}
+
+/* Prep/Break block */
+.prep-block{flex:1;border:1px solid #e5e7eb;margin-left:-1px;border-radius:0 14px 14px 0;display:flex;align-items:center;justify-content:center;padding:10px 20px;min-height:48px}
+.prep-input{font-weight:700;text-align:center;width:100%;border:none;background:transparent;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+
+/* Collapsed pills */
+.pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.pill{font-size:10px;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#6b7280;font-weight:500}
+
+/* Chevron toggle */
+.toggle-btn{background:none;border:none;cursor:pointer;color:#d1d5db;padding:2px;border-radius:4px;transition:.15s;flex-shrink:0}
+.toggle-btn:hover{color:#9ca3af;background:#f3f4f6}
+
+/* Schedule add buttons */
+.sched-btns{display:flex;gap:8px}
+.sched-btn{font-size:11px;font-weight:700;border:none;border-radius:10px;padding:6px 12px;cursor:pointer;transition:.15s}
+
+/* Fixed UI */
+.brand-switcher{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.12);padding:4px;display:flex;gap:4px;border:1px solid #f3f4f6}
+.brand-btn{padding:8px 20px;border-radius:12px;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:.2s;color:#9ca3af;background:transparent}
+.brand-btn.active{color:white}
+.ai-btn{position:fixed;bottom:28px;left:28px;z-index:100;color:white;border:none;border-radius:16px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:.2s}
+.ai-btn:hover{transform:scale(1.04);opacity:.92}
+.pdf-btn{position:fixed;bottom:28px;right:28px;z-index:100;background:#111827;color:white;border:none;border-radius:16px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:.2s}
+.pdf-btn:hover{transform:scale(1.04);opacity:.92}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
+.modal{background:white;border-radius:20px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:16px 20px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between}
+.modal-tabs{display:flex;padding:0 20px;border-bottom:1px solid #f3f4f6;gap:4px}
+.modal-tab{padding:10px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:#9ca3af;transition:.15s}
+.modal-tab.active{border-bottom-color:currentColor}
+.modal-body{padding:20px;max-height:55vh;overflow-y:auto}
+.modal-footer{padding:16px 20px;display:flex;align-items:center;gap:12px;border-top:1px solid #f3f4f6}
+.briefing-area{width:100%;height:200px;border:1px solid #e5e7eb;border-radius:12px;padding:14px;font-size:13px;line-height:1.6;color:#374151;transition:.15s}
+.briefing-area:focus{border-color:#9ca3af;outline:none}
+.upload-zone{border:2px dashed #e5e7eb;border-radius:12px;padding:32px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:.2s}
+.upload-zone:hover{border-color:#9ca3af}
+.generate-btn{color:white;border:none;border-radius:12px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;flex-shrink:0;transition:.15s}
+.generate-btn:disabled{opacity:.4;cursor:not-allowed}
+.error-box{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;color:#dc2626;display:flex;gap:8px;align-items:flex-start}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:300;background:#111;color:white;padding:10px 20px;border-radius:14px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+
+/* Footer */
+.doc-footer{padding:24px 32px 32px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f3f4f6;margin-top:24px}
+
+/* SVG icons inline */
+svg{display:inline-block;vertical-align:middle}
+
+/* Dropdown */
+.dropdown{position:absolute;top:100%;left:0;margin-top:4px;min-width:150px;background:white;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;max-height:180px;overflow-y:auto}
+.dropdown-item{padding:8px 12px;font-size:12px;color:#374151;cursor:pointer;border-bottom:1px solid #f9fafb;transition:.1s}
+.dropdown-item:last-child{border:none}
+.dropdown-item:hover{background:#f9fafb}
+.dropdown-item:first-child{border-radius:12px 12px 0 0}
+.dropdown-item:last-child{border-radius:0 0 12px 12px}
+.rel{position:relative}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useRef, useEffect, useCallback } = React;
+
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const API_KEY = ""; // Coloque sua chave aqui: sk-ant-...
+
+const BRANDS = {
+  locaweb: { name:"Locaweb", primary:"#E30613", headerBg:"#1A1A2E", logo:"LOCAWEB", client:"LOCAWEB", address:"Estúdio LWSA — São Paulo, SP" },
+  kinghost: { name:"KingHost", primary:"#F7941D", headerBg:"#1C2B4A", logo:"KINGHOST", client:"KINGHOST", address:"Estúdio KingHost — Porto Alegre, RS" },
+};
+const FORMATS = ["Talking Head","Entrevista","Tutorial","UGC","Depoimento","B-Roll","Apresentação Direta","Demonstração de Produto","Reels Dinâmico"];
+const PLATFORMS = ["Instagram Reels","Instagram Feed","YouTube Shorts","YouTube","TikTok","LinkedIn","Multiplatforma"];
+const RATIOS = ["9:16","16:9","1:1","4:5"];
+const DURATIONS = ["15s","30s","45s","1min","2min","3min","5min","+5min"];
+const ROLES = ["Apresentador(a)","Convidado(a)","Host","Entrevistador(a)","Diretor(a)","Câmera","Luz / Gaffer","Som","Maquiagem","Roteirista","Produtor(a)","Assistente"];
+
+// ── ICONS ───────────────────────────────────────────────────────────────────
+const Icon = ({ d, size=14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d}/>
+  </svg>
+);
+const icons = {
+  camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
+  plus: "M12 5v14M5 12h14",
+  trash: "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
+  printer: "M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z",
+  map: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2",
+  clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2",
+  chevDown: "M6 9l6 6 6-6",
+  chevUp: "M18 15l-6-6-6 6",
+  upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+  file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6",
+  sparkle: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  x: "M18 6L6 18M6 6l12 12",
+  alert: "M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 8v4M12 16h.01",
+  monitor: "M8 21h8M12 17v4M2 3h20a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1",
+  link: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71",
+  timer: "M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 6v6l4 2M16 2l4 4M8 2L4 6",
+  mic: "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8",
+};
+
+// ── COMBOBOX ────────────────────────────────────────────────────────────────
+function Combo({ value, onChange, options=[], placeholder="", style={} }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const filtered = options.filter(o => o.toLowerCase().includes((value||"").toLowerCase()));
+  useEffect(() => {
+    const h = e => { if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  return (
+    <div ref={ref} className="rel" style={{flex:1}}>
+      <input className="meta-input" value={value||""} placeholder={placeholder}
+        onChange={e=>{onChange(e.target.value);setOpen(true)}}
+        onFocus={()=>setOpen(true)} style={style} />
+      {open && filtered.length > 0 && (
+        <div className="dropdown">
+          {filtered.map(o => <div key={o} className="dropdown-item" onClick={()=>{onChange(o);setOpen(false)}}>{o}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── AI IMPORT MODAL ─────────────────────────────────────────────────────────
+function AIModal({ brand, onApply, onClose }) {
+  const B = BRANDS[brand];
+  const [tab, setTab] = useState("text");
+  const [text, setText] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [filePayload, setFilePayload] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+
+  const handleFile = async e => {
+    const file = e.target.files?.[0];
+    if(!file) return;
+    setFileName(file.name); setError(""); setFilePayload(null);
+    const ext = file.name.split(".").pop().toLowerCase();
+    if(ext==="txt"||ext==="md") { setFilePayload({type:"text",content:await file.text()}); return; }
+    if(ext==="pdf") {
+      const r = new FileReader();
+      r.onloadend = () => setFilePayload({type:"pdf",content:r.result.split(",")[1]});
+      r.readAsDataURL(file); return;
+    }
+    if(ext==="docx") {
+      try {
+        if(!window.mammoth) await new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+        const ab = await file.arrayBuffer();
+        const r = await window.mammoth.extractRawValue({arrayBuffer:ab});
+        setFilePayload({type:"text",content:r.value});
+      } catch { setError("Não foi possível ler o DOCX. Cole o texto manualmente."); }
+      return;
+    }
+    setError("Use PDF, DOCX ou TXT.");
+  };
+
+  const generate = async () => {
+    const content = tab==="text" ? text : filePayload?.content;
+    if(!content?.trim()) { setError("Adicione um briefing primeiro."); return; }
+    if(!API_KEY) { setError("Configure a chave da API no arquivo HTML (variável API_KEY)."); return; }
+    setLoading(true); setError("");
+    try {
+      const isPDF = filePayload?.type==="pdf";
+      const messages = isPDF
+        ? [{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:content}},{type:"text",text:"Analise e gere a Ordem do Dia."}]}]
+        : [{role:"user",content:`Analise este briefing e gere a Ordem do Dia:\n\n${content}`}];
+
+      const res = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":API_KEY,"anthropic-version":"2023-06-01"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6", max_tokens:2000,
+          system:`Você é um assistente de produção audiovisual. Analise o briefing e retorne APENAS um JSON válido (sem markdown) com esta estrutura:
+{"header":{"client":"","project":"","date":"DD/MM/AAAA — CIDADE","address":""},"people":[{"id":"1","name":"","role":"","timeArrival":"HH:MM","timeAction":"HH:MM","type":"cast"}],"schedule":[{"id":"s1","timeStart":"HH:MM","timeEnd":"HH:MM","type":"prep","title":"","description":"","cast":"","location":"","format":"","platform":"","ratio":"","duration":"","teleprompter":false,"reference":""}]}
+type pessoa: cast ou crew. type bloco: action, prep ou break. Se não existir info, use string vazia.`,
+          messages
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.find(b=>b.type==="text")?.text||"";
+      const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
+      onApply({
+        header: parsed.header,
+        people: (parsed.people||[]).map((p,i)=>({...p,id:String(i+1),image:null})),
+        schedule: (parsed.schedule||[]).map((s,i)=>({...s,id:`s${i}`,image:null}))
+      });
+      onClose();
+    } catch(e) {
+      setError("Erro ao processar. Verifique a chave da API e tente novamente.");
+    } finally { setLoading(false); }
+  };
+
+  const hasContent = tab==="text" ? text.trim() : !!filePayload;
+
+  return (
+    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div className="modal">
+        <div className="modal-header">
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:32,height:32,borderRadius:10,background:B.primary+"20",display:"flex",alignItems:"center",justifyContent:"center",color:B.primary}}>
+              <Icon d={icons.sparkle} size={16}/>
+            </div>
+            <div>
+              <div style={{fontWeight:900,fontSize:14,color:"#111"}}>Importar com IA</div>
+              <div style={{fontSize:11,color:"#9ca3af"}}>Cole um briefing ou suba um arquivo</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:"#9ca3af",padding:4,borderRadius:8}}>
+            <Icon d={icons.x} size={16}/>
+          </button>
+        </div>
+
+        <div className="modal-tabs">
+          {[{k:"text",label:"Colar texto",icon:icons.file},{k:"file",label:"Upload",icon:icons.upload}].map(({k,label,icon})=>(
+            <button key={k} className={`modal-tab ${tab===k?"active":""}`}
+              style={tab===k?{color:B.primary}:{}}
+              onClick={()=>{setTab(k);setError("")}}>
+              <Icon d={icon} size={12}/> {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="modal-body">
+          {tab==="text" ? (
+            <textarea className="briefing-area" value={text}
+              onChange={e=>{setText(e.target.value);setError("")}}
+              placeholder={`Cole o briefing, roteiro ou descrição da gravação.\n\nEx:\nCliente: Locaweb\nProjeto: Vídeo Produto — Agosto\nData: 15/08 — São Paulo\nLocal: Estúdio LWSA\n\nElenco:\n- Ana (Apresentadora) — chega 8h, grava 9h\n\nCronograma:\n08:00 Set up\n09:00 Gravação — Talking Head (Reels, 9:16, 30s)\n10:30 Intervalo`}/>
+          ) : (
+            <div>
+              <div className="upload-zone" onClick={()=>fileRef.current?.click()}>
+                <div style={{width:44,height:44,borderRadius:12,background:B.primary+"15",display:"flex",alignItems:"center",justifyContent:"center",color:B.primary}}>
+                  <Icon d={icons.upload} size={20}/>
+                </div>
+                {fileName
+                  ? <div style={{textAlign:"center"}}><div style={{fontWeight:700,fontSize:13}}>{fileName}</div><div style={{fontSize:11,color:filePayload?"#16a34a":"#9ca3af",marginTop:2}}>{filePayload?"✓ Pronto":"⏳ Lendo..."}</div></div>
+                  : <div style={{textAlign:"center"}}><div style={{fontWeight:600,fontSize:13,color:"#6b7280"}}>Clique para selecionar</div><div style={{fontSize:11,color:"#9ca3af",marginTop:2}}>PDF, DOCX ou TXT</div></div>
+                }
+                <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.md" style={{display:"none"}} onChange={handleFile}/>
+              </div>
+              {filePayload?.type==="pdf" && (
+                <div style={{marginTop:10,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#15803d",display:"flex",gap:8,alignItems:"center"}}>
+                  <Icon d={icons.file} size={14}/> PDF carregado — a IA vai ler e extrair as informações.
+                </div>
+              )}
+            </div>
+          )}
+          {error && <div className="error-box" style={{marginTop:12}}><Icon d={icons.alert} size={14}/>{error}</div>}
+        </div>
+
+        <div className="modal-footer">
+          <div style={{fontSize:10,color:"#9ca3af",flex:1,lineHeight:1.5}}>A IA preenche automaticamente. Você pode editar tudo depois.</div>
+          <button className="generate-btn" onClick={generate} disabled={loading||!hasContent} style={{background:B.primary}}>
+            {loading
+              ? <><span style={{width:14,height:14,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"white",borderRadius:"50%",display:"inline-block",animation:"spin 1s linear infinite"}}></span>Gerando...</>
+              : <><Icon d={icons.sparkle} size={14}/>Gerar</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const [brand, setBrand] = useState("locaweb");
+  const [showAI, setShowAI] = useState(false);
+  const [toast, setToast] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const B = BRANDS[brand];
+
+  const today = () => {
+    const d = new Date();
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()} — SÃO PAULO`;
+  };
+
+  const [hdr, setHdr] = useState({client:"LOCAWEB",project:"TÍTULO | MÊS",date:today(),address:"Estúdio LWSA — São Paulo, SP",logo:null});
+  const [people, setPeople] = useState([
+    {id:"1",name:"",role:"Apresentador(a)",arriv:"08:00",action:"09:00",image:null,type:"cast"},
+    {id:"2",name:"",role:"Convidado(a)",arriv:"08:30",action:"09:00",image:null,type:"cast"},
+    {id:"3",name:"",role:"Diretor(a)",arriv:"07:00",action:"08:00",image:null,type:"crew"},
+    {id:"4",name:"",role:"Câmera",arriv:"07:00",action:"08:00",image:null,type:"crew"},
+  ]);
+  const [sched, setSched] = useState([
+    {id:"s0",ts:"07:30",te:"09:00",type:"prep",title:"MONTAGEM / SET UP",desc:"",cast:"",loc:"",img:null,format:"",platform:"",ratio:"",duration:"",teleprompter:false,ref:"",open:true},
+    {id:"s1",ts:"09:00",te:"10:00",type:"action",title:"",desc:"",cast:"",loc:"",img:null,format:"",platform:"",ratio:"",duration:"",teleprompter:false,ref:"",open:true},
+    {id:"s2",ts:"10:00",te:"10:30",type:"break",title:"INTERVALO / COFFEE",desc:"",cast:"",loc:"",img:null,format:"",platform:"",ratio:"",duration:"",teleprompter:false,ref:"",open:true},
+  ]);
+
+  const prevBrand = useRef(brand);
+  useEffect(()=>{
+    if(prevBrand.current!==brand){
+      setHdr(h=>({...h,client:B.client,address:B.address,logo:null}));
+      prevBrand.current=brand;
+    }
+  },[brand]);
+
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),3000); };
+
+  const applyAI = ({header,people:p,schedule:s}) => {
+    setHdr(h=>({...h,...header,logo:h.logo}));
+    setPeople(p);
+    setSched(s.map(b=>({...b,open:true})));
+    showToast("✨ Ordem do Dia gerada!");
+  };
+
+  const imgUpload = (e, cb) => {
+    const f = e.target.files?.[0]; if(!f) return;
+    const r = new FileReader();
+    r.onloadend = () => cb(r.result);
+    r.readAsDataURL(f);
+  };
+
+  const newBlock = type => ({
+    id:Date.now().toString(),ts:"10:00",te:"11:00",type,
+    title:type==="action"?"":type==="break"?"INTERVALO":"PREPARAÇÃO",
+    desc:"",cast:"",loc:"",img:null,format:"",platform:"",ratio:"",duration:"",teleprompter:false,ref:"",open:true
+  });
+
+  const upd = (id,k,v) => setSched(s=>s.map(b=>b.id===id?{...b,[k]:v}:b));
+
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const el = document.getElementById("doc");
+      window.scrollTo(0,0);
+      const canvas = await window.html2canvas(el,{
+        scale:2,useCORS:true,backgroundColor:"#fff",
+        windowWidth:el.scrollWidth,windowHeight:el.scrollHeight,
+        onclone:doc=>{
+          doc.querySelectorAll(".no-print").forEach(e=>e.style.display="none");
+          doc.querySelectorAll("textarea").forEach(ta=>{
+            const d=doc.createElement("div");d.textContent=ta.value||ta.textContent;
+            d.className=ta.className;d.style.whiteSpace="pre-wrap";d.style.height="auto";
+            ta.parentNode.replaceChild(d,ta);
+          });
+          doc.querySelectorAll("input:not([type=file]):not([type=time])").forEach(inp=>{
+            const d=doc.createElement("div");d.textContent=inp.value||"";
+            d.className=inp.className;ta&&(ta.style.whiteSpace="normal");
+            inp.parentNode.replaceChild(d,inp);
+          });
+        }
+      });
+      const {jsPDF} = window.jspdf;
+      const pdf = new jsPDF("p","mm","a4");
+      const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+      const img=canvas.toDataURL("image/jpeg",.95);
+      const totalH=(canvas.height*pw)/canvas.width;
+      let left=totalH,pos=0;
+      pdf.addImage(img,"JPEG",0,pos,pw,totalH);left-=ph;
+      while(left>0){pos-=ph;pdf.addPage();pdf.addImage(img,"JPEG",0,pos,pw,totalH);left-=ph;}
+      pdf.save(`OrdemDoDia_${B.name}.pdf`);
+      showToast("PDF gerado!");
+    } catch(e){showToast("Erro ao gerar PDF.");}
+    finally{setExporting(false);}
+  };
+
+  const cast=people.filter(p=>p.type==="cast");
+  const crew=people.filter(p=>p.type==="crew");
+  const addPerson = type => setPeople(prev=>[...prev,{id:Date.now().toString(),name:"",role:type==="cast"?"Apresentador(a)":"Câmera",arriv:"08:00",action:"09:00",image:null,type}]);
+
+  return (
+    <div>
+      {showAI && <AIModal brand={brand} onApply={applyAI} onClose={()=>setShowAI(false)}/>}
+      {toast && <div className="toast">{toast}</div>}
+
+      {/* Brand switcher */}
+      <div className="brand-switcher no-print">
+        {Object.entries(BRANDS).map(([k,b])=>(
+          <button key={k} className={`brand-btn ${brand===k?"active":""}`}
+            style={brand===k?{background:b.primary}:{}}
+            onClick={()=>setBrand(k)}>{b.name}</button>
+        ))}
+      </div>
+
+      {/* AI + PDF buttons */}
+      <button className="ai-btn no-print" style={{background:B.primary}} onClick={()=>setShowAI(true)}>
+        <Icon d={icons.sparkle} size={16}/> Importar com IA
+      </button>
+      <button className="pdf-btn no-print" onClick={exportPDF} disabled={exporting}>
+        <Icon d={icons.printer} size={16}/> {exporting?"Gerando...":"Gerar PDF"}
+      </button>
+
+      <div className="container">
+        <div className="doc" id="doc">
+
+          {/* LOGO BANNER */}
+          <div className="logo-banner" style={{background:B.headerBg,
+            ...(hdr.logo?{backgroundImage:`url(${hdr.logo})`,backgroundSize:"contain",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:{})
+          }}>
+            {!hdr.logo && <span style={{fontWeight:900,fontSize:32,letterSpacing:"0.2em",color:B.primary}}>{B.logo}</span>}
+            <div className="logo-overlay no-print">
+              <Icon d={icons.camera} size={20}/><span>Adicionar Logo</span>
+              <input type="file" accept="image/*" style={{display:"none"}} id="logo-up" onChange={e=>imgUpload(e,img=>setHdr({...hdr,logo:img}))}/>
+            </div>
+            <label htmlFor="logo-up" style={{position:"absolute",inset:0,cursor:"pointer"}} className="no-print"/>
+          </div>
+
+          {/* HEADER META */}
+          <div className="header-meta" style={{borderBottom:`4px solid ${B.primary}`}}>
+            <input className="client-label" value={hdr.client} onChange={e=>setHdr({...hdr,client:e.target.value})}
+              style={{color:B.primary,border:"none",background:"transparent",width:"100%",letterSpacing:"0.3em"}}/>
+            <input className="project-title" value={hdr.project} onChange={e=>setHdr({...hdr,project:e.target.value})}
+              placeholder="Título do Projeto"/>
+            <div className="date-row">
+              <Icon d={icons.clock} size={13}/>
+              <input className="date-input" value={hdr.date} onChange={e=>setHdr({...hdr,date:e.target.value})}/>
+            </div>
+            <div className="location-box">
+              <div className="location-label" style={{color:B.primary}}>
+                <Icon d={icons.map} size={13}/> Locação
+              </div>
+              <textarea className="location-text" value={hdr.address}
+                onChange={e=>{setHdr({...hdr,address:e.target.value});e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px"}}/>
+            </div>
+          </div>
+
+          {/* ELENCO */}
+          <div className="section">
+            <div className="section-header" style={{borderBottom:`2px solid ${B.primary}`}}>
+              <span className="section-title">🎬 Elenco</span>
+              <button className="add-btn no-print" style={{color:B.primary}} onClick={()=>addPerson("cast")}>
+                <Icon d={icons.plus} size={13}/> Adicionar
+              </button>
+            </div>
+            <div className="grid-3">
+              {cast.map(p=>(
+                <div key={p.id} className="person-card">
+                  <button className="del-btn no-print" onClick={()=>setPeople(prev=>prev.filter(x=>x.id!==p.id))}>✕</button>
+                  <div className="avatar">
+                    {p.image ? <img src={p.image} alt=""/> : <div className="avatar-icon"><Icon d={icons.camera} size={18}/></div>}
+                    <div className="av-overlay no-print"><Icon d={icons.camera} size={14} style={{color:"white"}}/></div>
+                    <input type="file" accept="image/*" style={{display:"none"}} id={`av-${p.id}`}
+                      onChange={e=>imgUpload(e,img=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,image:img}:x)))}/>
+                    <label htmlFor={`av-${p.id}`} style={{position:"absolute",inset:0,cursor:"pointer"}} className="no-print"/>
+                  </div>
+                  <div className="person-info">
+                    <input className="name-input" value={p.name} placeholder="Nome"
+                      onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,name:e.target.value}:x))}/>
+                    <input className="role-input" value={p.role} placeholder="Função"
+                      onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,role:e.target.value}:x))}/>
+                    <div className="time-row">
+                      <span className="time-lbl" style={{color:B.primary}}>CHEG</span>
+                      <input type="time" className="time-input" value={p.arriv}
+                        onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,arriv:e.target.value}:x))}/>
+                      <span className="time-lbl" style={{color:B.primary,marginLeft:4}}>CENA</span>
+                      <input type="time" className="time-input" value={p.action}
+                        onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,action:e.target.value}:x))}/>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {cast.length===0 && <div className="empty-state" style={{gridColumn:"1/-1"}} onClick={()=>addPerson("cast")}><Icon d={icons.plus} size={14}/> Adicionar elenco</div>}
+            </div>
+          </div>
+
+          {/* EQUIPE */}
+          <div className="section" style={{paddingTop:0}}>
+            <div className="section-header" style={{borderBottom:"2px solid #e5e7eb"}}>
+              <span className="section-title">🎥 Equipe Técnica</span>
+              <button className="add-btn no-print" style={{color:"#6b7280"}} onClick={()=>addPerson("crew")}>
+                <Icon d={icons.plus} size={13}/> Adicionar
+              </button>
+            </div>
+            <div className="grid-4">
+              {crew.map(p=>(
+                <div key={p.id} className="person-card">
+                  <button className="del-btn no-print" onClick={()=>setPeople(prev=>prev.filter(x=>x.id!==p.id))}>✕</button>
+                  <div className="avatar">
+                    {p.image ? <img src={p.image} alt=""/> : <div className="avatar-icon"><Icon d={icons.camera} size={18}/></div>}
+                    <input type="file" accept="image/*" style={{display:"none"}} id={`avc-${p.id}`}
+                      onChange={e=>imgUpload(e,img=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,image:img}:x)))}/>
+                    <label htmlFor={`avc-${p.id}`} style={{position:"absolute",inset:0,cursor:"pointer"}} className="no-print"/>
+                  </div>
+                  <div className="person-info">
+                    <input className="name-input" value={p.name} placeholder="Nome"
+                      onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,name:e.target.value}:x))}/>
+                    <input className="role-input" value={p.role} placeholder="Função"
+                      onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,role:e.target.value}:x))}/>
+                    <div className="time-row">
+                      <span className="time-lbl" style={{color:B.primary}}>CHEG</span>
+                      <input type="time" className="time-input" value={p.arriv}
+                        onChange={e=>setPeople(prev=>prev.map(x=>x.id===p.id?{...x,arriv:e.target.value}:x))}/>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {crew.length===0 && <div className="empty-state" style={{gridColumn:"1/-1"}} onClick={()=>addPerson("crew")}><Icon d={icons.plus} size={14}/> Adicionar equipe</div>}
+            </div>
+          </div>
+
+          {/* ORDEM DO DIA */}
+          <div className="section" style={{paddingTop:0,paddingBottom:20}}>
+            <div className="section-header" style={{borderBottom:`2px solid ${B.primary}`}}>
+              <span className="section-title">📋 Ordem do Dia</span>
+              <div className="sched-btns no-print">
+                <button className="sched-btn" style={{background:"#f3f4f6",color:"#6b7280"}} onClick={()=>setSched(s=>[...s,newBlock("prep")])}>+ Prep</button>
+                <button className="sched-btn" style={{background:B.primary+"15",color:B.primary}} onClick={()=>setSched(s=>[...s,newBlock("break")])}>+ Intervalo</button>
+                <button className="sched-btn" style={{background:B.primary,color:"white"}} onClick={()=>setSched(s=>[...s,newBlock("action")])}>+ Cena</button>
+              </div>
+            </div>
+
+            <div className="schedule-list">
+              {sched.map(b=>(
+                <div key={b.id} className="block-row">
+                  <button className="del-block no-print" onClick={()=>setSched(s=>s.filter(x=>x.id!==b.id))}>✕</button>
+
+                  {/* Time */}
+                  <div className="time-col">
+                    <input type="time" value={b.ts} onChange={e=>upd(b.id,"ts",e.target.value)}/>
+                    <div className="time-sep">│</div>
+                    <input type="time" value={b.te} onChange={e=>upd(b.id,"te",e.target.value)}/>
+                  </div>
+
+                  {/* ACTION */}
+                  {b.type==="action" && (
+                    <div className="action-block">
+                      <div className="accent-bar" style={{background:B.primary}}/>
+                      <div className="action-main">
+                        <div style={{display:"flex",alignItems:"flex-start",gap:6}}>
+                          <input className="scene-title" value={b.title} placeholder="Título da cena"
+                            style={{flex:1}} onChange={e=>upd(b.id,"title",e.target.value)}/>
+                          <button className="toggle-btn no-print" onClick={()=>upd(b.id,"open",!b.open)}>
+                            <Icon d={b.open?icons.chevUp:icons.chevDown} size={12}/>
+                          </button>
+                        </div>
+                        {b.open ? (
+                          <>
+                            <textarea className="scene-desc" value={b.desc} placeholder="Descrição, roteiro ou observações..."
+                              onChange={e=>{upd(b.id,"desc",e.target.value);e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px"}}/>
+                            <div className="cast-row">
+                              <span className="cast-lbl">Com</span>
+                              <input className="cast-input" value={b.cast} placeholder="Quem aparece"
+                                style={{color:B.primary}} onChange={e=>upd(b.id,"cast",e.target.value)}/>
+                            </div>
+                            {/* Social meta */}
+                            <div className="scene-meta">
+                              <div className="meta-row"><Icon d={icons.monitor} size={11} style={{color:"#d1d5db",flexShrink:0}}/>
+                                <Combo value={b.format} onChange={v=>upd(b.id,"format",v)} options={FORMATS} placeholder="Formato"/></div>
+                              <div className="meta-row"><Icon d={icons.mic} size={11} style={{color:"#d1d5db",flexShrink:0}}/>
+                                <Combo value={b.platform} onChange={v=>upd(b.id,"platform",v)} options={PLATFORMS} placeholder="Plataforma"/></div>
+                              <div className="meta-row"><span style={{color:"#d1d5db",fontSize:10,flexShrink:0}}>▭</span>
+                                <Combo value={b.ratio} onChange={v=>upd(b.id,"ratio",v)} options={RATIOS} placeholder="Proporção"/></div>
+                              <div className="meta-row"><Icon d={icons.timer} size={11} style={{color:"#d1d5db",flexShrink:0}}/>
+                                <Combo value={b.duration} onChange={v=>upd(b.id,"duration",v)} options={DURATIONS} placeholder="Duração final"/></div>
+                              <div className="meta-row meta-full"><Icon d={icons.link} size={11} style={{color:"#d1d5db",flexShrink:0}}/>
+                                <input className="meta-input" value={b.ref} placeholder="Referência (link ou descrição)"
+                                  style={{flex:1}} onChange={e=>upd(b.id,"ref",e.target.value)}/></div>
+                              <div className="meta-full">
+                                <button className="teleprompter-btn"
+                                  style={b.teleprompter?{background:B.primary,color:"white",borderColor:B.primary}:{}}
+                                  onClick={()=>upd(b.id,"teleprompter",!b.teleprompter)}>
+                                  🎙 Teleprompter {b.teleprompter?"ON":"OFF"}
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="pills">
+                            {b.format&&<span className="pill">{b.format}</span>}
+                            {b.platform&&<span className="pill">{b.platform}</span>}
+                            {b.ratio&&<span className="pill">{b.ratio}</span>}
+                            {b.duration&&<span className="pill">{b.duration}</span>}
+                            {b.teleprompter&&<span className="pill" style={{background:B.primary+"20",color:B.primary}}>Teleprompter</span>}
+                          </div>
+                        )}
+                      </div>
+                      {/* Side */}
+                      <div className="action-side">
+                        <div className="loc-area">
+                          <textarea className="loc-input" value={b.loc} placeholder="Cenário / Local"
+                            onChange={e=>{upd(b.id,"loc",e.target.value);e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px"}}/>
+                        </div>
+                        <div className="img-area">
+                          {b.img
+                            ? <div className="img-bg" style={{backgroundImage:`url(${b.img})`}}/>
+                            : <div className="img-placeholder"><Icon d={icons.camera} size={14}/><span>Ref. câmera</span></div>
+                          }
+                          <div className="img-overlay no-print"><Icon d={icons.camera} size={14} style={{color:"white"}}/></div>
+                          <input type="file" accept="image/*" style={{display:"none"}} id={`img-${b.id}`}
+                            onChange={e=>imgUpload(e,img=>upd(b.id,"img",img))}/>
+                          <label htmlFor={`img-${b.id}`} style={{position:"absolute",inset:0,cursor:"pointer"}} className="no-print"/>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PREP / BREAK */}
+                  {(b.type==="prep"||b.type==="break") && (
+                    <div className="prep-block" style={{
+                      background:b.type==="break"?B.primary+"12":"#f8f9fa",
+                      borderLeft:`3px solid ${b.type==="break"?B.primary:"#e5e7eb"}`
+                    }}>
+                      <input className="prep-input" value={b.title} placeholder="DESCRIÇÃO"
+                        style={{color:b.type==="break"?B.primary:"#9ca3af"}}
+                        onChange={e=>upd(b.id,"title",e.target.value)}/>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div className="doc-footer">
+            <span style={{fontSize:10,color:"#d1d5db"}}>Gerado em {new Date().toLocaleDateString("pt-BR")}</span>
+            <span style={{fontSize:10,fontWeight:900,letterSpacing:"0.2em",color:B.primary}}>{B.name} — ORDEM DO DIA</span>
+          </div>
+
+        </div>
+      </div>
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
 </html>
